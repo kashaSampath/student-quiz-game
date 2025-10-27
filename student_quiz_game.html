@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Student Quiz</title>
+<style>
+  :root{--card-bg:#fff;--accent:#4CAF50;--muted:#666}
+  body{font-family:Inter, "Poppins", sans-serif; background: linear-gradient(135deg,#eef6fb,#dfeffd); margin:0; display:flex; align-items:center; justify-content:center; min-height:100vh; color:#000}
+  .card{width:94%;max-width:1000px;background:var(--card-bg);border-radius:12px;box-shadow:0 8px 30px rgba(2,20,40,0.08);padding:20px}
+  h1,h2{margin:6px 0 12px;color:#000}
+  input,select,button{font-size:15px;padding:10px;border-radius:10px;border:1px solid #ccc;outline:none}
+  input,select{width:88%;margin:8px 0;display:block;color:#000}
+  .flex-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{cursor:pointer;background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px}
+  .btn-alt{background:#007bff}
+  .small{font-size:13px;color:#333}
+  .option{display:block;width:100%;margin:8px 0;padding:12px;border-radius:8px;border:1px solid #ccc;background:#f8f8f8;text-align:left;color:#000}
+  .option:disabled{background:#eee;color:#777;cursor:not-allowed}
+  .detail-list{ text-align:left; max-height:260px; overflow:auto; padding:10px; background:#fafafa; border-radius:8px; border:1px solid #eee; margin-top:10px; color:#000}
+  .badge{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:18px;font-weight:800;margin-top:8px}
+  .gold{background:linear-gradient(90deg,#FFD700,#FFC700); color:#000}
+  .silver{background:linear-gradient(90deg,#C0C0C0,#BFBFBF); color:#000}
+  .bronze{background:linear-gradient(90deg,#CD7F32,#B87333); color:#000}
+  .participant{background:#e0e0e0;color:#000}
+  .meta{font-size:14px;color:var(--muted);margin-bottom:10px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:760px){ .grid{grid-template-columns:1fr} input,select{width:100%} }
+  .center{display:flex;justify-content:center;align-items:center}
+  #timer{font-weight:800;color:#e53935}
+  .icon{width:22px;height:22px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Student Quiz(Session)</h1>
+  <p class="meta">All data kept in memory for current browser session. Reload the page to reset everything.</p>
+
+  <!-- LOGIN / REGISTER -->
+  <div id="authArea">
+    <div id="registerBlock">
+      <h2>Register</h2>
+      <div class="grid">
+        <input id="regName" placeholder="Full Name" />
+        <input id="regCollege" placeholder="College" />
+        <input id="regRoll" placeholder="Roll Number (unique in session)" />
+        <input id="regPass" placeholder="Password (optional)" />
+      </div>
+      <div class="flex-row">
+        <button id="btnRegister">Register</button>
+        <button id="btnShowUsers" class="btn-alt">Show Session Accounts</button>
+        <button id="btnResetSession" style="background:#e74c3c">Reset Session</button>
+      </div>
+    </div>
+
+    <hr>
+
+    <div id="loginBlock">
+      <h2>Login</h2>
+      <div class="grid">
+        <input id="loginRoll" placeholder="Roll Number" />
+        <input id="loginPass" placeholder="Password" />
+      </div>
+      <div class="flex-row">
+        <button id="btnLogin">Login</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBJECTS -->
+  <div id="subjectsArea" style="display:none">
+    <h2>Welcome, <span id="userNameDisplay"></span></h2>
+    <p class="small">Choose a subject and start quiz.</p>
+    <div class="grid">
+      <div>
+        <h3>Previous Attempts (session)</h3>
+        <div id="attemptsList" class="detail-list">No attempts yet.</div>
+      </div>
+      <div>
+        <h3>Pick Subject</h3>
+        <select id="subjectSelect"></select>
+        <div class="flex-row" style="margin-top:8px">
+          <button id="btnStart">Start Quiz ▶</button>
+          <button id="btnLogout" class="btn-alt">Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="changePwdArea" style="display:none;margin-top:12px">
+      <input id="curPwd" placeholder="Current Password" />
+      <input id="newPwd" placeholder="New Password" />
+      <div class="flex-row"><button id="btnSavePwd">Save</button><button id="btnCancelPwd" class="btn-alt">Cancel</button></div>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quizArea" style="display:none;margin-top:8px">
+    <div class="center" style="gap:12px">
+      <h2 id="subjectTitle">Quiz</h2>
+      <div id="timer" title="Time left">Time: <span id="timeLeft">30</span>s</div>
+    </div>
+
+    <div id="questionBlock" style="margin-top:12px">
+      <h3 id="questionText" style="font-weight:800"></h3>
+      <div id="optionsBlock"></div>
+    </div>
+
+    <div class="flex-row">
+      <button id="btnPrev" style="background:#6c757d;display:none">⬅ Prev</button>
+      <button id="btnNext">Next ➡</button>
+      <button id="btnSubmit" style="background:#007bff;display:none">Submit ✅</button>
+    </div>
+
+    <p class="small">Questions in this run: <span id="runCount">0</span></p>
+  </div>
+
+  <!-- RESULT -->
+  <div id="resultArea" style="display:none;margin-top:12px">
+    <h2>Results</h2>
+    <div id="resultSummary" class="meta"></div>
+    <div id="rankBadge"></div>
+
+    <h3 style="margin-top:12px">Answer Review</h3>
+    <div id="answerReview" class="detail-list"></div>
+
+    <h3 style="margin-top:12px">Questions in this attempt</h3>
+    <div id="askedReview" class="detail-list"></div>
+
+    <div class="flex-row" style="margin-top:10px">
+      <button id="btnBack" class="btn-alt">Back to Subjects</button>
+      <button id="btnDownload">Download Result</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------- QUESTIONS - 8 subjects, 10 questions each ---------- */
+const QUIZZES = {
+  java: [
+    {q:"Which keyword is used to inherit a class in Java?", options:["extends","implements","super","this"], ans:"extends"},
+    {q:"Which method signature is entry point of Java program?", options:["public static void main(String[] args)","void main()","start()","init()"], ans:"public static void main(String[] args)"},
+    {q:"Which collection allows duplicates and preserves insertion order?", options:["ArrayList","HashSet","TreeSet","LinkedHashSet"], ans:"ArrayList"},
+    {q:"Which keyword handles exceptions?", options:["try","except","catch","handle"], ans:"try"},
+    {q:"What does JVM stand for?", options:["Java Virtual Machine","Java Visual Manager","Java Vendor Module","None"], ans:"Java Virtual Machine"},
+    {q:"Which is not a primitive type?", options:["String","int","double","boolean"], ans:"String"},
+    {q:"Which keyword prevents inheritance?", options:["final","static","volatile","abstract"], ans:"final"},
+    {q:"What is JDK?", options:["Java Development Kit","Java Deploy Kit","Java Debug Kit","Java Driver Kit"], ans:"Java Development Kit"},
+    {q:"Which loop executes at least once?", options:["do-while","while","for","foreach"], ans:"do-while"},
+    {q:"Which package contains System class?", options:["java.lang","java.util","java.io","java.net"], ans:"java.lang"}
+  ],
+  python: [
+    {q:"What is the Python file extension?", options:[".py",".pyt",".pt",".pyw"], ans:".py"},
+    {q:"Which keyword defines a function in Python?", options:["def","function","func","lambda"], ans:"def"},
+    {q:"Which data type is immutable?", options:["tuple","list","dict","set"], ans:"tuple"},
+    {q:"How do you write a comment in Python?", options:["# comment","// comment","/* */","-- comment"], ans:"# comment"},
+    {q:"Which operator is exponentiation?", options:["**","^","exp","~~"], ans:"**"},
+    {q:"len([1,2,3]) returns?", options:["3","2","1","0"], ans:"3"},
+    {q:"Which creates a list comprehension?", options:["[x for x in y]","{x for x in y}","(x for x in y)","<x for x in y>"], ans:"[x for x in y]"},
+    {q:"How to import math module?", options:["import math","include math","using math","require math"], ans:"import math"},
+    {q:"Which reads input from user?", options:["input()","read()","scanf()","gets()"], ans:"input()"},
+    {q:"How to create a dictionary?", options:["{ 'a':1 }","['a',1]","('a',1)","<a:1>"], ans:"{ 'a':1 }"}
+  ],
+  c: [
+    {q:"Which header contains printf()?", options:["stdio.h","conio.h","stdlib.h","string.h"], ans:"stdio.h"},
+    {q:"Single-line comment in modern C?", options:["//","/* */","#","--"], ans:"//"},
+    {q:"Who developed C language?", options:["Dennis Ritchie","Bjarne Stroustrup","James Gosling","Guido van Rossum"], ans:"Dennis Ritchie"},
+    {q:"Which function allocates memory dynamically?", options:["malloc","alloc","new","reserve"], ans:"malloc"},
+    {q:"Operator for address-of?", options:["&","*","%","$"], ans:"&"},
+    {q:"Typical size of int on 32-bit?", options:["4 bytes","2 bytes","8 bytes","1 byte"], ans:"4 bytes"},
+    {q:"Best loop if iteration count known?", options:["for","while","do-while","repeat"], ans:"for"},
+    {q:"Header for malloc?", options:["stdlib.h","stdio.h","math.h","string.h"], ans:"stdlib.h"},
+    {q:"Operator for remainder?", options:["%","/","*","+"], ans:"%"},
+    {q:"Which is not a valid identifier?", options:["int","myVar","_value","value1"], ans:"int"}
+  ],
+  cpp: [
+    {q:"Who created C++?", options:["Bjarne Stroustrup","Dennis Ritchie","James Gosling","Brendan Eich"], ans:"Bjarne Stroustrup"},
+    {q:"What enables OOP in C++?", options:["Classes","Structures only","Header files","Pointers"], ans:"Classes"},
+    {q:"Scope resolution operator?", options:["::",":",".","->"], ans:"::"},
+    {q:"Include iostream as?", options:["#include <iostream>","#include iostream","#import <iostream>","#using <iostream>"], ans:"#include <iostream>"},
+    {q:"Print to console with?", options:["cout","printf","Console.Write","echo"], ans:"cout"},
+    {q:"Constructor name is?", options:["Same as class","init","constructor","__construct"], ans:"Same as class"},
+    {q:"Not an access specifier?", options:["package","public","private","protected"], ans:"package"},
+    {q:"Allocate memory in C++?", options:["new","malloc","alloc","reserve"], ans:"new"},
+    {q:"Template feature present in?", options:["C++","C","JavaScript","HTML"], ans:"C++"},
+    {q:"Function overloading supported?", options:["Yes","No","Only Java","Only Python"], ans:"Yes"}
+  ],
+  html: [
+    {q:"HTML stands for?", options:["HyperText Markup Language","HighText Machine Language","HyperText Markdown Language","None"], ans:"HyperText Markup Language"},
+    {q:"Tag for line break?", options:["<br>","<b>","<i>","<p>"], ans:"<br>"},
+    {q:"Largest heading tag?", options:["<h1>","<h6>","<header>","<head>"], ans:"<h1>"},
+    {q:"Attribute for image src?", options:["src","href","link","ref"], ans:"src"},
+    {q:"Ordered list tag?", options:["<ol>","<ul>","<li>","<list>"], ans:"<ol>"},
+    {q:"HTML file extension?", options:[".html",".htm",".txt",".php"], ans:".html"},
+    {q:"Meta info tag?", options:["<head>","<body>","<main>","<section>"], ans:"<head>"},
+    {q:"Tag for link?", options:["<a>","<link>","<href>","<url>"], ans:"<a>"},
+    {q:"Make text bold (both)?", options:["<b> and <strong>","<bold>","<strongonly>","<bonly>"], ans:"<b> and <strong>"},
+    {q:"Paragraph tag is?", options:["<p>","<para>","<text>","<div>"], ans:"<p>"}
+  ],
+  javascript: [
+    {q:"Block-scoped variable keyword?", options:["let","var","const","both"], ans:"let"},
+    {q:"Function syntax?", options:["function f() {}","def f():","fun f()","fn f()"], ans:"function f() {}"},
+    {q:"Which is not falsy?", options:["'0'","0","''","null"], ans:"'0'"},
+    {q:"Create an array literal?", options:["[]","()","{}","<>"], ans:"[]"},
+    {q:"Add to end of array?", options:["push","pop","shift","unshift"], ans:"push"},
+    {q:"Strict equality operator?", options:["===","==","=","!=="], ans:"==="},
+    {q:"Parse JSON string?", options:["JSON.parse()","parseJSON()","eval()","JSON.toObject()"], ans:"JSON.parse()"},
+    {q:"DOM ready event?", options:["DOMContentLoaded","load","ready","onload"], ans:"DOMContentLoaded"},
+    {q:"Log to console?", options:["console.log()","print()","echo()","cout"], ans:"console.log()"},
+    {q:"Create a Promise?", options:["new Promise()","Promise.create()","create Promise","Promise()"], ans:"new Promise()"}
+  ],
+  php: [
+    {q:"PHP stands for?", options:["Hypertext Preprocessor","Personal Home Page","Preprocessor Home Page","None"], ans:"Hypertext Preprocessor"},
+    {q:"PHP file extension?", options:[".php",".phtml",".php3",".all"], ans:".php"},
+    {q:"Output in PHP?", options:["echo","print","both","printf"], ans:"both"},
+    {q:"PHP start tag?", options:["<?php","<php","<?","<script>"], ans:"<?php"},
+    {q:"Variable prefix?", options:["$","@","#","%"], ans:"$"},
+    {q:"Include file function?", options:["include()","require()","both","import()"], ans:"both"},
+    {q:"Array shorthand supported?", options:["Yes","No","Only old versions","Not sure"], ans:"Yes"},
+    {q:"Deprecated mysql connect?", options:["mysql_connect","mysqli_connect","PDO","pg_connect"], ans:"mysql_connect"},
+    {q:"Define constant?", options:["define()","const","both","constant()"], ans:"define()"},
+    {q:"Concatenate strings operator?", options:[".","+","concat","&"], ans:"."}
+  ],
+  sql: [
+    {q:"Read rows from table uses?", options:["SELECT","READ","GET","FETCH"], ans:"SELECT"},
+    {q:"Filter rows clause?", options:["WHERE","HAVING","GROUP BY","ORDER BY"], ans:"WHERE"},
+    {q:"Remove table command?", options:["DROP TABLE","DELETE TABLE","REMOVE TABLE","TRUNCATE TABLE"], ans:"DROP TABLE"},
+    {q:"Sort results uses?", options:["ORDER BY","GROUP BY","SORT BY","ARRANGE"], ans:"ORDER BY"},
+    {q:"Count rows function?", options:["COUNT()","SUM()","TOTAL()","NUM()"], ans:"COUNT()"},
+    {q:"Keep all left rows join?", options:["LEFT JOIN","INNER JOIN","RIGHT JOIN","FULL JOIN"], ans:"LEFT JOIN"},
+    {q:"Group results clause?", options:["GROUP BY","ORDER BY","HAVING","WHERE"], ans:"GROUP BY"},
+    {q:"Limit rows MySQL?", options:["LIMIT","TOP","ROWNUM","FETCH"], ans:"LIMIT"},
+    {q:"Remove duplicate rows?", options:["DISTINCT","UNIQUE","ONLY","SINGLE"], ans:"DISTINCT"},
+    {q:"Add column command?", options:["ALTER TABLE ADD","ADD COLUMN","MODIFY TABLE ADD","UPDATE TABLE ADD"], ans:"ALTER TABLE ADD"}
+  ]
+};
+
+/* ---------- SESSION (in-memory) ---------- */
+let sessionAccounts = {};         // {roll: {name,college,roll,password,attempts:[]}}
+let logged = null;                // current user object
+let sessionHistory = {};          // per-subject used question indexes in this session
+let runQuestions = [];            // questions for current run
+let runAnswers = [];              // user answers for current run
+let currentIndex = 0;
+let timer = null;
+const TIME_PER_Q = 30;
+
+/* ---------- UI refs ---------- */
+const regName = document.getElementById('regName'), regCollege = document.getElementById('regCollege'), regRoll = document.getElementById('regRoll'), regPass = document.getElementById('regPass');
+const btnRegister = document.getElementById('btnRegister'), btnShowUsers = document.getElementById('btnShowUsers'), btnResetSession = document.getElementById('btnResetSession');
+const loginRoll = document.getElementById('loginRoll'), loginPass = document.getElementById('loginPass'), btnLogin = document.getElementById('btnLogin');
+const subjectsArea = document.getElementById('subjectsArea'), subjectSelect = document.getElementById('subjectSelect'), btnStart = document.getElementById('btnStart'), btnLogout = document.getElementById('btnLogout');
+const attemptsList = document.getElementById('attemptsList'), userNameDisplay = document.getElementById('userNameDisplay');
+
+const quizArea = document.getElementById('quizArea'), subjectTitle = document.getElementById('subjectTitle'), timeLeftEl = document.getElementById('timeLeft');
+const questionText = document.getElementById('questionText'), optionsBlock = document.getElementById('optionsBlock');
+const btnPrev = document.getElementById('btnPrev'), btnNext = document.getElementById('btnNext'), btnSubmit = document.getElementById('btnSubmit'), runCount = document.getElementById('runCount');
+
+const resultArea = document.getElementById('resultArea'), resultSummary = document.getElementById('resultSummary'), rankBadge = document.getElementById('rankBadge');
+const answerReview = document.getElementById('answerReview'), askedReview = document.getElementById('askedReview');
+const btnBack = document.getElementById('btnBack'), btnDownload = document.getElementById('btnDownload');
+
+const subjectSelectEl = document.getElementById('subjectSelect');
+
+/* ---------- Initialize UI ---------- */
+function initUI(){
+  // populate subject select
+  const keys = Object.keys(QUIZZES);
+  subjectSelectEl.innerHTML = keys.map(k=>`<option value="${k}">${k.toUpperCase()}</option>`).join('');
+  // wire events
+  btnRegister.onclick = registerUser;
+  btnShowUsers.onclick = showSessionAccounts;
+  btnResetSession.onclick = resetSession;
+  btnLogin.onclick = loginUser;
+  btnLogout.onclick = ()=>{ logged=null; subjectsArea.style.display='none'; document.getElementById('authArea').style.display='block'; };
+  btnStart.onclick = startRun;
+  btnPrev.onclick = prevQuestion;
+  btnNext.onclick = nextQuestion;
+  btnSubmit.onclick = submitRun;
+  btnBack.onclick = ()=>{ resultArea.style.display='none'; subjectsArea.style.display='block'; };
+  btnDownload.onclick = downloadResult;
+  // initial visibility
+  subjectsArea.style.display='none';
+  quizArea.style.display='none';
+  resultArea.style.display='none';
+}
+initUI();
+
+/* ---------- Account handlers ---------- */
+function registerUser(){
+  const name = regName.value.trim(), college = regCollege.value.trim(), roll = regRoll.value.trim(), pwd = regPass.value.trim() || "1234";
+  if(!name || !college || !roll) return alert("Fill name, college, roll.");
+  if(sessionAccounts[roll]) return alert("Roll already exists in this session.");
+  sessionAccounts[roll] = { name, college, roll, password: pwd, attempts: [] };
+  alert("Registered for this session. Now login.");
+}
+function showSessionAccounts(){
+  const arr = Object.values(sessionAccounts);
+  if(arr.length === 0) return alert("No accounts in this session.");
+  alert(arr.map(a=>`${a.name} — ${a.roll} — ${a.college}`).join("\n"));
+}
+function resetSession(){
+  if(!confirm("Reset session (this clears all in-memory accounts and history)?")) return;
+  sessionAccounts = {}; logged=null; sessionHistory = {}; runQuestions=[]; runAnswers=[]; clearInterval(timer);
+  document.getElementById('authArea').style.display='block';
+  subjectsArea.style.display='none'; quizArea.style.display='none'; resultArea.style.display='none';
+  alert("Session reset.");
+}
+function loginUser(){
+  const roll = loginRoll.value.trim(), pwd = loginPass.value.trim();
+  if(!sessionAccounts[roll]) return alert("No account registered in this session.");
+  if(sessionAccounts[roll].password !== pwd) return alert("Incorrect password.");
+  logged = sessionAccounts[roll];
+  document.getElementById('authArea').style.display='none';
+  subjectsArea.style.display='block';
+  userNameDisplay.textContent = `${logged.name} (${logged.roll})`;
+  renderAttempts();
+}
+
+/* ---------- Prepare run (no repeated Q until all used in session) ---------- */
+function prepareRun(subject){
+  const pool = QUIZZES[subject] || [];
+  if(!sessionHistory[subject]) sessionHistory[subject] = [];
+  let used = sessionHistory[subject];
+  let remaining = pool.map((_,i)=>i).filter(i=> !used.includes(i));
+  // if not enough remaining to pick 10 unique, reset that subject in session
+  if(remaining.length < 10){
+    sessionHistory[subject] = [];
+    remaining = pool.map((_,i)=>i);
+  }
+  shuffleArray(remaining);
+  const pick = remaining.slice(0, Math.min(10, remaining.length));
+  // mark them used
+  sessionHistory[subject] = sessionHistory[subject].concat(pick);
+  return pick.map(i => ({ index:i, ...pool[i] }));
+}
+
+/* ---------- Start quiz run ---------- */
+function startRun(){
+  const subject = subjectSelectEl.value;
+  if(!subject) return alert("Choose a subject");
+  runQuestions = prepareRun(subject);
+  if(runQuestions.length === 0) return alert("No questions for this subject.");
+  runAnswers = new Array(runQuestions.length);
+  currentIndex = 0;
+  subjectTitle.textContent = `Quiz — ${subject.toUpperCase()}`;
+  document.getElementById('authArea').style.display='none';
+  subjectsArea.style.display='none';
+  quizArea.style.display='block';
+  resultArea.style.display='none';
+  runCount.textContent = runQuestions.length;
+  btnSubmit.style.display = 'none';
+  showCurrentQuestion();
+  startTimer();
+}
+
+/* ---------- Rendering question ---------- */
+function showCurrentQuestion(){
+  clearInterval(timer);
+  startTimer(); // start fresh for this question
+  const q = runQuestions[currentIndex];
+  questionText.textContent = `${currentIndex+1}. ${q.q}`;
+  optionsBlock.innerHTML = '';
+  const opts = [...q.options]; shuffleArray(opts);
+  opts.forEach(opt=>{
+    const b = document.createElement('button');
+    b.className = 'option';
+    b.textContent = opt;
+    b.disabled = false;
+    b.onclick = ()=> selectOption(opt, b);
+    optionsBlock.appendChild(b);
+  });
+  // restore previous selection highlight if exists
+  if(runAnswers[currentIndex]){
+    Array.from(document.querySelectorAll('.option')).forEach(b=>{
+      if(b.textContent === runAnswers[currentIndex]) b.style.background = "#d0e9c6";
+    });
+  }
+  // prev/next/submit visibility
+  btnPrev.style.display = (currentIndex > 0) ? 'inline-block' : 'none';
+  btnNext.style.display = (currentIndex < runQuestions.length-1) ? 'inline-block' : 'none';
+  btnSubmit.style.display = (currentIndex === runQuestions.length-1 && !!runAnswers[currentIndex]) ? 'inline-block' : 'none';
+}
+
+/* ---------- Option select ---------- */
+function selectOption(opt, btn){
+  // clear highlight & enable others
+  Array.from(document.querySelectorAll('.option')).forEach(b=>{ b.style.background = '#f8f8f8'; });
+  btn.style.background = "#d0e9c6";
+  runAnswers[currentIndex] = opt;
+  // enable submit if last question
+  if(currentIndex === runQuestions.length-1) btnSubmit.style.display = 'inline-block';
+}
+
+/* ---------- Prev/Next ---------- */
+function prevQuestion(){
+  clearInterval(timer);
+  if(currentIndex > 0){ currentIndex--; showCurrentQuestion(); }
+}
+function nextQuestion(){
+  // if current question time finished and no answer, allow next but keep (No auto jump). Still require answer? We'll allow moving even if unanswered.
+  clearInterval(timer);
+  if(currentIndex < runQuestions.length-1){
+    currentIndex++; showCurrentQuestion();
+  } else {
+    // last question reached
+    if(!runAnswers[currentIndex]) return alert("Please select an option before submitting.");
+  }
+}
+
+/* ---------- Submit ---------- */
+function submitRun(){
+  if(!runAnswers[currentIndex]) return alert("Please select an option before submitting.");
+  endRun();
+}
+
+/* ---------- Timer logic (reset each new question), disable options on timeout ---------- */
+function startTimer(){
+  clearInterval(timer);
+  let t = TIME_PER_Q;
+  timeLeftEl.textContent = t;
+  timer = setInterval(()=>{
+    t--;
+    timeLeftEl.textContent = t;
+    if(t <= 0){
+      clearInterval(timer);
+      timeLeftEl.textContent = "0";
+      // disable options for this question
+      Array.from(document.querySelectorAll('.option')).forEach(b=> b.disabled = true);
+      // do not auto-jump — user must press Next
+    }
+  },1000);
+}
+
+/* ---------- End run (scoring & saving) ---------- */
+function endRun(){
+  clearInterval(timer);
+  const total = runQuestions.length;
+  let score = 0;
+  const details = runQuestions.map((q,i)=>{
+    const chosen = runAnswers[i] || "(No Answer)";
+    const correct = q.ans;
+    if(chosen === correct) score++;
+    return { q: q.q, chosen, correct };
+  });
+  const percent = Math.round((score/total)*100);
+  const rank = computeRank(percent);
+  const date = new Date().toLocaleString();
+
+  // save attempt in session account
+  if(!logged.attempts) logged.attempts = [];
+  logged.attempts.push({ subject: subjectSelectEl.value, score, total, percent, date, rank });
+
+  // show result UI
+  quizArea.style.display = 'none';
+  resultArea.style.display = 'block';
+  resultSummary.innerHTML = `<strong>${logged.name}</strong> — ${logged.roll} | Score: ${score}/${total} (${percent}%) — ${date}`;
+  // rank badge with icon
+  rankBadge.innerHTML = createRankBadge(rank);
+  // details
+  answerReview.innerHTML = details.map((d,idx)=>`
+    <div style="padding:8px;border-bottom:1px dashed #e6e6e6">
+      <strong>${idx+1}.</strong> ${escapeHtml(d.q)}<br>
+      Your: <span style="color:${d.chosen===d.correct?'green':'#e53935'}">${escapeHtml(d.chosen)}</span> |
+      Correct: <strong>${escapeHtml(d.correct)}</strong>
+    </div>
+  `).join('');
+  askedReview.innerHTML = runQuestions.map((q,idx)=>`<div><strong>${idx+1}.</strong> ${escapeHtml(q.q)}</div>`).join('');
+
+  // Render attempts list
+  renderAttempts();
+  // prepare download
+  btnDownload.onclick = ()=> {
+    let txt = `Student: ${logged.name}\nRoll: ${logged.roll}\nCollege: ${logged.college}\nSubject: ${subjectSelectEl.value}\nScore: ${score}/${total}\nPercent: ${percent}%\nRank: ${rank}\nDate: ${date}\n\nDetails:\n`;
+    details.forEach((d,i)=> txt += `${i+1}. ${d.q}\nYour: ${d.chosen}\nCorrect: ${d.correct}\n\n`);
+    const a = document.createElement('a');
+    a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txt);
+    a.download = `QuizResult_${logged.roll}_${subjectSelectEl.value}.txt`;
+    a.click();
+  };
+}
+
+/* ---------- Render attempts ---------- */
+function renderAttempts(){
+  if(!logged || !logged.attempts || logged.attempts.length === 0){
+    attemptsList.textContent = "No attempts yet.";
+    return;
+  }
+  attemptsList.innerHTML = logged.attempts.slice().reverse().map(a=>`${a.date} | ${a.subject.toUpperCase()} | ${a.score}/${a.total} (${a.percent}%) — ${a.rank}`).join('<br>');
+}
+
+/* ---------- Utils ---------- */
+function computeRank(p){
+  if(p >= 85) return "Gold";
+  if(p >= 70) return "Silver";
+  if(p >= 50) return "Bronze";
+  return "Participant";
+}
+function createRankBadge(rank){
+  if(rank === "Gold") return `<span class="badge gold">🥇 ${rank}</span>`;
+  if(rank === "Silver") return `<span class="badge silver">🥈 ${rank}</span>`;
+  if(rank === "Bronze") return `<span class="badge bronze">🥉 ${rank}</span>`;
+  return `<span class="badge participant">❌ ${rank}</span>`;
+}
+function shuffleArray(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
+function escapeHtml(s){ if(s === undefined || s === null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+</script>
+</body>
+</html>
